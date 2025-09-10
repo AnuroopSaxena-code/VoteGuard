@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+pandas
+numpy
+scikit-learn
+plotly
+pydantic
+transformers
+torch    # optional if you use HF models locally
+gunicorn
+python-multipart
+pytest
