@@ -1,91 +1,121 @@
 import streamlit as st
+import os
 import pandas as pd
-import plotly.express as px
-from api_client import health_check, predict_fraud, predict_news
 
-# ----- PAGE CONFIG -----
-st.set_page_config(page_title="VoteGuard", layout="wide")
+# ------------------ CONFIG ------------------
+st.set_page_config(page_title="VoteGuard", page_icon="🛡️", layout="wide")
 
-# ----- SIDEBAR -----
-st.sidebar.title("🛡️ VoteGuard")
-if st.sidebar.button("Check Backend Health"):
-    try:
-        resp = health_check()
-        st.sidebar.success(f"Backend says: {resp}")
-    except Exception as e:
-        st.sidebar.error(f"Health check failed: {e}")
+# ------------------ SIDEBAR ------------------
+st.sidebar.markdown("<h2 style='text-align:center;'>VoteGuard</h2>", unsafe_allow_html=True)
 
-st.sidebar.markdown("---")
-st.sidebar.write("Built at [Hackathon Name] 🏆")
-st.sidebar.write("Team: <your team name>")
+# Try to load local logo
+logo_path = "assets/logo.png"
+if os.path.exists(logo_path):
+    st.sidebar.image(logo_path, width=120)
+else:
+    # fallback emoji logo
+    st.sidebar.markdown("<h1 style='text-align:center;'>🛡️</h1>", unsafe_allow_html=True)
 
-# ----- MAIN APP -----
-tab1, tab2 = st.tabs(["Fraud Detection", "News Triage"])
+# Navigation state
+if "page" not in st.session_state:
+    st.session_state.page = "home"
 
-# ====================
-# TAB 1 - FRAUD
-# ====================
-with tab1:
-    st.header("📊 Polling Station Risk Analysis")
+# Meet the Team button in sidebar
+if st.sidebar.button("👩‍💻 Meet the Team"):
+    st.session_state.page = "team"
 
-    uploaded_file = st.file_uploader("Upload polling station CSV", type=["csv"])
-    if uploaded_file is not None:
-        with st.spinner("Analyzing..."):
-            try:
-                results = predict_fraud(uploaded_file)
-            except Exception as e:
-                st.error(f"API error: {e}")
-                results = None
+# ------------------ HOME PAGE ------------------
+if st.session_state.page == "home":
+    st.title("🛡️ Welcome to VoteGuard")
+    st.subheader("AI-Powered Election Integrity Platform")
 
-        if results:
-            stations = pd.DataFrame(results["stations"])
-            clusters = results.get("clusters", [])
+    st.write(
+        """
+        **VoteGuard** helps election monitors and citizens by:
+        - Detecting polling stations with unusually high fraud risk using clustering + anomaly detection.
+        - Triaging election-related news to quickly flag potential misinformation.
+        """
+    )
 
-            # KPIs
-            total = len(stations)
-            critical = (stations["risk_bucket"] == "Critical").sum()
-            high_plus = (stations["risk_bucket"].isin(["High", "Critical"])).mean() * 100
+    st.markdown("---")
 
-            col1, col2, col3 = st.columns(3)
-            col1.metric("Total Stations", total)
-            col2.metric("% High+Critical", f"{high_plus:.1f}%")
-            col3.metric("# Critical", critical)
+    col1, col2 = st.columns(2)
 
-            # Leaderboard
-            st.subheader("Leaderboard")
-            st.dataframe(
-                stations[["station_id", "district", "state", "risk_score", "risk_bucket"]],
-                use_container_width=True
+    with col1:
+        st.markdown("### 📊 Fraud Detection")
+        st.write("Upload polling station CSVs and get risk scores, anomaly detection, and flagged high-risk clusters.")
+        if st.button("Go to Fraud Detection"):
+            st.session_state.page = "fraud"
+
+    with col2:
+        st.markdown("### 📰 News Triage")
+        st.write("Paste any election-related headline or article and get AI-powered fake vs real predictions with confidence scores.")
+        if st.button("Go to News Triage"):
+            st.session_state.page = "news"
+
+# ------------------ FRAUD DETECTION PAGE ------------------
+elif st.session_state.page == "fraud":
+    st.title("📊 Fraud Detection")
+    st.write("Upload polling station data (CSV) to analyze fraud risk.")
+
+    if st.button("⬅️ Back to Home"):
+        st.session_state.page = "home"
+
+    uploaded_file = st.file_uploader("Upload CSV", type=["csv"])
+    if uploaded_file:
+        df = pd.read_csv(uploaded_file)
+        st.write("Preview of uploaded data:")
+        st.dataframe(df.head())
+
+        # Placeholder for ML results (mock chart)
+        st.success("✅ Data uploaded! (Fraud risk analysis will be integrated here.)")
+
+# ------------------ NEWS TRIAGE PAGE ------------------
+elif st.session_state.page == "news":
+    st.title("📰 News Triage")
+    st.write("Paste an election-related headline or article to check authenticity.")
+
+    if st.button("⬅️ Back to Home"):
+        st.session_state.page = "home"
+
+    user_input = st.text_area("Enter news text here:")
+    if st.button("Analyze News"):
+        if user_input.strip():
+            # Placeholder for backend API call
+            st.success("✅ Analysis complete! (Real prediction will be integrated here.)")
+            st.metric("Prediction", "Likely Real")
+            st.metric("Confidence", "87%")
+        else:
+            st.warning("Please enter some text.")
+
+# ------------------ TEAM PAGE ------------------
+elif st.session_state.page == "team":
+    st.title("👩‍💻 Meet the Team")
+    st.write("The developers behind VoteGuard:")
+
+    if st.button("⬅️ Back to Home"):
+        st.session_state.page = "home"
+
+    team = [
+        {"name": "Member 1", "role": "Frontend Developer", "img": "https://via.placeholder.com/150"},
+        {"name": "Member 2", "role": "Backend Developer", "img": "https://via.placeholder.com/150"},
+        {"name": "Member 3", "role": "ML Engineer", "img": "https://via.placeholder.com/150"},
+        {"name": "Member 4", "role": "Data Scientist", "img": "https://via.placeholder.com/150"},
+        {"name": "Member 5", "role": "UI/UX Designer", "img": "https://via.placeholder.com/150"},
+    ]
+
+    cols = st.columns(3)
+    for idx, member in enumerate(team):
+        with cols[idx % 3]:
+            st.markdown(
+                f"""
+                <div style="text-align:center; transition: transform 0.3s;"
+                     onmouseover="this.style.transform='scale(1.1)';"
+                     onmouseout="this.style.transform='scale(1)';">
+                    <img src="{member['img']}" style="border-radius:50%; width:120px; height:120px;"><br>
+                    <b>{member['name']}</b><br>
+                    <span style="color:gray;">{member['role']}</span>
+                </div>
+                """,
+                unsafe_allow_html=True,
             )
-
-            # Scatterplot
-            st.subheader("Cluster Scatter")
-            fig = px.scatter(
-                stations,
-                x="z_turnout",
-                y="z_invalid",
-                size="risk_score",
-                color="cluster_id",
-                hover_data=["station_id", "risk_bucket", "risk_score"],
-                title="Stations by Turnout vs Invalid Votes"
-            )
-            st.plotly_chart(fig, use_container_width=True)
-
-            # Drilldown
-            selected_id = st.selectbox("Select station for details", stations["station_id"])
-            st.write("Station Details:")
-            st.json(stations[stations["station_id"] == selected_id].to_dict(orient="records")[0])
-
-# ====================
-# TAB 2 - NEWS
-# ====================
-with tab2:
-    st.header("📰 News Headline Triage")
-    headline = st.text_area("Paste a headline to analyze")
-    if st.button("Analyze Headline"):
-        with st.spinner("Checking..."):
-            try:
-                result = predict_news(headline)
-                st.success(f"Label: {result['label']}, Confidence: {result['confidence']:.2f}")
-            except Exception as e:
-                st.error(f"API error: {e}")

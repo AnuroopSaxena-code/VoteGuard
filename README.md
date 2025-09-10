@@ -1,2 +1,0 @@
-#VoteGuard
-Aanya
